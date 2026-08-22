@@ -1,0 +1,54 @@
+:root {
+	--gmui-color-neutral-900: #181818;
+	--gmui-color-neutral-850: #212121;
+	--gmui-color-neutral-800: #232323;
+	--gmui-color-neutral-750: #272727;
+	--gmui-color-neutral-700: #282828;
+	--gmui-color-neutral-600: #3f434b;
+	--gmui-color-neutral-550: #424242;
+	--gmui-color-neutral-500: #535353;
+	--gmui-color-neutral-400: #6b717c;
+	--gmui-color-warm-600: #4e453f;
+	--gmui-color-accent-600: #039d5b;
+	--gmui-color-accent-650: #07917d;
+
+	--gmui-bg-app: var(--gmui-color-neutral-850);
+	--gmui-bg-main: var(--gmui-color-neutral-700);
+	--gmui-bg-surface: var(--gmui-color-neutral-750);
+	--gmui-bg-surface-muted: var(--gmui-color-neutral-800);
+	--gmui-bg-element: var(--gmui-color-neutral-600);
+	--gmui-bg-element-active: var(--gmui-color-neutral-400);
+	--gmui-bg-overlay: var(--gmui-color-neutral-550);
+	--gmui-border-default: var(--gmui-color-neutral-500);
+	--gmui-accent-primary: var(--gmui-color-accent-600);
+
+	--gmui-gradient-window-header: linear-gradient(
+		90deg,
+		var(--gmui-color-neutral-900) 0%,
+		var(--gmui-color-warm-600) 60%
+	);
+	--gmui-gradient-window-header-active: linear-gradient(
+		90deg,
+		var(--gmui-color-neutral-900) 0%,
+		var(--gmui-color-accent-650) 60%
+	);
+
+	--gmui-button-bg: var(--gmui-bg-main);
+	--gmui-button-bg-hover: var(--gmui-bg-element);
+	--gmui-button-bg-active: var(--gmui-bg-element-active);
+	--gmui-button-bg-disabled: var(--gmui-bg-surface-muted);
+	--gmui-button-border: var(--gmui-border-default);
+
+	--gmui-checkbox-bg: var(--gmui-bg-overlay);
+	--gmui-checkbox-bg-hover: var(--gmui-bg-element);
+	--gmui-checkbox-bg-active: var(--gmui-bg-element-active);
+	--gmui-checkbox-bg-disabled: var(--gmui-bg-surface-muted);
+	--gmui-checkbox-border: var(--gmui-border-default);
+	--gmui-checkbox-check-color: var(--gmui-accent-primary);
+
+	--gmui-window-bg: var(--gmui-bg-surface);
+	--gmui-window-border: var(--gmui-border-default);
+	--gmui-window-border-active: var(--gmui-accent-primary);
+	--gmui-window-header-bg: var(--gmui-gradient-window-header);
+	--gmui-window-header-bg-active: var(--gmui-gradient-window-header-active);
+}

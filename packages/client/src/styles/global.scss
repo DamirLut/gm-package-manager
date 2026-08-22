@@ -1,0 +1,42 @@
+@use './colors.scss';
+@use './readme.scss';
+
+@font-face {
+	font-family: 'Open Sans';
+	font-style: normal;
+	font-weight: 400;
+	font-display: optional;
+	src: url('../lib/assets/fonts/open-sans-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Open Sans';
+	font-style: normal;
+	font-weight: 700;
+	font-display: optional;
+	src: url('../lib/assets/fonts/open-sans-latin-700.woff2') format('woff2');
+}
+
+:root {
+	font-family: 'Open Sans', Arial, 'Segoe UI', sans-serif;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 400;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+
+	background-color: var(--gmui-bg-app);
+	color: #fff; /// REPLACE WITH VAR
+}
+
+*,
+*::after,
+*::before {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
