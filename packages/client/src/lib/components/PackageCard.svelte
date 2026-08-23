@@ -4,6 +4,7 @@
 	import ClockIcon from '$lib/components/uikit/icons/ClockIcon.svelte';
 	import LicenseIcon from '$lib/components/uikit/icons/LicenseIcon.svelte';
 	import VersionsIcon from '$lib/components/uikit/icons/VersionsIcon.svelte';
+	import Card from '$lib/components/uikit/Card.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { formatRelativeTime, gmIconBuilder } from '$lib/utils';
 
@@ -16,55 +17,43 @@
 	const href = $derived(resolve('/packages/[...id]', { id: pkg.name }));
 </script>
 
-<a class="package-card" {href}>
-	<div class="icon">
-		<img src={gmIconBuilder(pkg.gm.icon)} alt="package icon" width="64" height="64" />
+<Card {href}>
+	<div class="package-card">
+		<div class="icon">
+			<img src={gmIconBuilder(pkg.gm.icon)} alt="package icon" width="64" height="64" />
+		</div>
+		<div class="content">
+			<header>
+				<strong class="display-name">{pkg.gm.displayName}</strong>
+			</header>
+			<p class="description">{pkg.gm.shortDescription || pkg.description}</p>
+			<footer>
+				<span class="meta author">
+					<img src={pkg.author.avatar} alt={pkg.author.name} width="16" height="16" />
+					{pkg.author.name}
+				</span>
+				<span class="meta">
+					<VersionsIcon />
+					{pkg.version}
+				</span>
+				<span class="meta">
+					<ClockIcon />
+					{m.published({ time: formatRelativeTime(pkg.time) })}
+				</span>
+				<span class="meta">
+					<LicenseIcon />
+					{pkg.license}
+				</span>
+			</footer>
+		</div>
 	</div>
-	<div class="content">
-		<header>
-			<strong class="display-name">{pkg.gm.displayName}</strong>
-		</header>
-		<p class="description">{pkg.gm.shortDescription || pkg.description}</p>
-		<footer>
-			<span class="meta author">
-				<img src={pkg.author.avatar} alt={pkg.author.name} width="16" height="16" />
-				{pkg.author.name}
-			</span>
-			<span class="meta">
-				<VersionsIcon />
-				{pkg.version}
-			</span>
-			<span class="meta">
-				<ClockIcon />
-				{m.published({ time: formatRelativeTime(pkg.time) })}
-			</span>
-			<span class="meta">
-				<LicenseIcon />
-				{pkg.license}
-			</span>
-		</footer>
-	</div>
-</a>
+</Card>
 
 <style lang="scss">
 	.package-card {
 		display: flex;
 		align-items: center;
 		gap: 12px;
-
-		background-color: var(--gmui-bg-surface);
-		border: 1px solid var(--gmui-border-default);
-		border-radius: 5px;
-		padding: 12px 16px;
-		text-decoration: none;
-		color: inherit;
-		cursor: pointer;
-
-		transition: all ease-in-out 100ms;
-
-		&:hover {
-			border-color: var(--gmui-color-accent-600);
-		}
 	}
 
 	.icon img {
