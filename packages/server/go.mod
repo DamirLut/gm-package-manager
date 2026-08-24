@@ -5,6 +5,7 @@ go 1.27.0
 require (
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/pressly/goose/v3 v3.27.3
+	golang.org/x/crypto v0.54.0
 	modernc.org/sqlite v1.57.0
 )
 
@@ -55,7 +56,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
