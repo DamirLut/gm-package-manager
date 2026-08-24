@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"server/internal/database"
 	"server/internal/logger"
 	"server/internal/router"
 	"server/internal/storage"
@@ -26,6 +27,13 @@ func main() {
 		log.Error("storage initialization failed", "err", err)
 		os.Exit(1)
 	}
+
+	db, err := database.FromEnv(log)
+	if err != nil {
+		log.Error("database initialization failed", "err", err)
+		os.Exit(1)
+	}
+	defer db.Close()
 
 	r := router.New(log, store)
 
