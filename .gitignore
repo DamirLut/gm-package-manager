@@ -4,3 +4,8 @@ Thumbs.db
 
 # Dependencies
 node_modules/
+
+# Server
+/packages/server/storage/
+/packages/server/bin/
+
