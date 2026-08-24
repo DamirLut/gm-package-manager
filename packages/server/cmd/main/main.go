@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	"server/internal/audit"
+	"server/internal/auth"
 	"server/internal/database"
 	"server/internal/logger"
 	"server/internal/router"
@@ -35,7 +38,20 @@ func main() {
 	}
 	defer db.Close()
 
-	r := router.New(log, store)
+	authSvc, err := auth.FromEnv(db.DB, log)
+	if err != nil {
+		log.Error("auth initialization failed", "err", err)
+		os.Exit(1)
+	}
+
+	auditor, err := audit.New(filepath.Join(store.Root(), "audit.jsonl"), log)
+	if err != nil {
+		log.Error("audit initialization failed", "err", err)
+		os.Exit(1)
+	}
+	defer auditor.Close()
+
+	r := router.New(log, store, authSvc, auditor)
 
 	srv := &http.Server{
 		Addr:    addr,

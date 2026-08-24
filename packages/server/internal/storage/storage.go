@@ -12,6 +12,7 @@ import (
 var ErrNotExist = errors.New("storage: entry does not exist")
 
 type Storage interface {
+	Root() string
 	GetManifest(ctx context.Context, pkg string) ([]byte, error)
 	PutManifest(ctx context.Context, pkg string, data []byte) error
 	GetTarball(ctx context.Context, pkg, filename string) (io.ReadCloser, int64, error)

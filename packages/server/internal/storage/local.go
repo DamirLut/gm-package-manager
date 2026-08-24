@@ -25,6 +25,8 @@ func NewLocal(root string) *Local {
 	return &Local{root: root, pkgLock: make(map[string]*sync.Mutex)}
 }
 
+func (s *Local) Root() string { return s.root }
+
 func (s *Local) GetManifest(_ context.Context, pkg string) ([]byte, error) {
 	if !validPkg(pkg) {
 		return nil, ErrNotExist

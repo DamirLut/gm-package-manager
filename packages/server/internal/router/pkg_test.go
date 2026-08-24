@@ -2,22 +2,12 @@ package router
 
 import (
 	"encoding/json"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
-
-	"server/internal/storage"
 )
-
-func newTestServer(t *testing.T) (http.Handler, storage.Storage) {
-	t.Helper()
-	store := storage.NewLocal(t.TempDir())
-	return New(slog.New(slog.NewTextHandler(io.Discard, nil)), store), store
-}
 
 func TestSplitPkg(t *testing.T) {
 	tests := []struct {
@@ -49,7 +39,8 @@ func TestSplitPkg(t *testing.T) {
 // Verifies that all name spelling variants reach the handler
 // and are parsed identically through the real router.
 func TestPkgDocSpellings(t *testing.T) {
-	h, store := newTestServer(t)
+	ts := newTestServer(t)
+	h, store := ts.handler, ts.store
 
 	for _, name := range []string{"@scope/foo", "foo"} {
 		err := store.PutManifest(t.Context(), name, []byte(`{"name":"`+name+`"}`))
@@ -94,7 +85,8 @@ func TestPkgDocSpellings(t *testing.T) {
 }
 
 func TestTarballDownload(t *testing.T) {
-	h, store := newTestServer(t)
+	ts := newTestServer(t)
+	h, store := ts.handler, ts.store
 
 	content := "fake tarball payload"
 	if _, err := store.PutTarball(t.Context(), "@scope/foo", "foo-1.0.0.tgz", strings.NewReader(content)); err != nil {
@@ -128,7 +120,7 @@ func TestTarballDownload(t *testing.T) {
 }
 
 func TestAuditStub(t *testing.T) {
-	h, _ := newTestServer(t)
+	h := newTestServer(t).handler
 
 	req := httptest.NewRequest(http.MethodPost, "/-/npm/v1/security/advisories/bulk", nil)
 	rec := httptest.NewRecorder()
@@ -143,7 +135,7 @@ func TestAuditStub(t *testing.T) {
 }
 
 func TestPkgNotFound(t *testing.T) {
-	h, _ := newTestServer(t)
+	h := newTestServer(t).handler
 
 	tests := []string{
 		"/",

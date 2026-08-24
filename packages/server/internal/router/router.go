@@ -8,19 +8,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"server/internal/audit"
+	"server/internal/auth"
 	"server/internal/storage"
 )
 
-func New(logger *slog.Logger, store storage.Storage) *chi.Mux {
+func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service, auditor *audit.Logger) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(logger))
+	r.Use(bearer(authenticator))
 
 	r.Get("/-/ping", handlePing)
 
 	// npm calls this on every install; an empty object is enough
 	r.Post("/-/npm/v1/security/advisories/bulk", handleAudit)
+
+	// npm adduser bootstrap (Basic or JSON body, see login.go)
+	r.Put("/-/user/*", handleLogin(authenticator, auditor))
 
 	// scoped names contain a slash and arrive in different encodings,
 	// so the package path is parsed manually (see pkg.go)
