@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	server: {
 		host: true,
+		proxy: {
+			"/-": "http://localhost:8080",
+		},
 	},
 	plugins: [
 		sveltekit({
