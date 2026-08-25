@@ -28,6 +28,13 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	// npm adduser bootstrap (Basic or JSON body, see login.go)
 	r.Put("/-/user/*", handleLogin(authenticator, auditor))
 
+	// IDE package list (see packages.go)
+	r.Get("/-/verdaccio/data/packages", handlePackages(store, logger))
+	r.Get("/-/packages", handlePackages(store, logger))
+
+	// npm publish (see publish.go)
+	r.Put("/*", handlePublish(store, auditor))
+
 	// scoped names contain a slash and arrive in different encodings,
 	// so the package path is parsed manually (see pkg.go)
 	r.Get("/*", handlePkg(store))
