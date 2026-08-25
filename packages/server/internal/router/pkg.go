@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"server/internal/access"
+	"server/internal/audit"
+	"server/internal/auth"
 	"server/internal/storage"
 )
 
@@ -42,11 +45,14 @@ func splitPkg(p string) (name, rest string) {
 
 // GET /@scope/foo, /@scope%2Ffoo, /%40scope%2Ffoo — package document
 // GET /<name>/-/<file>.tgz — tarball download
-func handlePkg(store storage.Storage) http.HandlerFunc {
+func handlePkg(store storage.Storage, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name, rest := splitPkg(r.URL.Path)
 		if name == "" || (rest != "" && !strings.HasPrefix(rest, "-/")) {
 			WriteError(w, ErrNotFound)
+			return
+		}
+		if !guardRead(w, r, auditor, rules, name) {
 			return
 		}
 		if rest == "" {
@@ -55,6 +61,29 @@ func handlePkg(store storage.Storage) http.HandlerFunc {
 		}
 		serveTarball(w, r, store, name, strings.TrimPrefix(rest, "-/"))
 	}
+}
+
+// guardRead combines both layers: the server's packages config and the
+// token's read scopes; on failure it writes the response and returns false.
+func guardRead(w http.ResponseWriter, r *http.Request, auditor *audit.Logger, rules []access.Rule, name string) bool {
+	p, _ := auth.UserFrom(r.Context())
+	if access.Allow(rules, auth.ActionRead, name, p) &&
+		(p == nil || p.Can(auth.ActionRead, name)) {
+		return true
+	}
+	if p == nil {
+		unauthorized(w)
+		return false
+	}
+	auditor.Record(audit.Event{
+		Action:  audit.ActionPackageAccessDenied,
+		Actor:   p.Name,
+		Package: name,
+		IP:      clientIP(r),
+		UA:      r.UserAgent(),
+	})
+	WriteError(w, ErrForbidden)
+	return false
 }
 
 // serveManifest answers with the full document, or the abbreviated form when

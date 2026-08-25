@@ -8,12 +8,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
 	"server/internal/storage"
 )
 
-func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service, auditor *audit.Logger) *chi.Mux {
+func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service, auditor *audit.Logger, rules []access.Rule) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
@@ -33,11 +34,11 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	r.Get("/-/packages", handlePackages(store, logger))
 
 	// npm publish (see publish.go)
-	r.Put("/*", handlePublish(store, auditor))
+	r.Put("/*", handlePublish(store, auditor, rules))
 
 	// scoped names contain a slash and arrive in different encodings,
 	// so the package path is parsed manually (see pkg.go)
-	r.Get("/*", handlePkg(store))
+	r.Get("/*", handlePkg(store, auditor, rules))
 
 	return r
 }

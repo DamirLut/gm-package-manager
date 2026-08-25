@@ -9,8 +9,9 @@ import (
 
 // bearer authenticates "Authorization: Bearer" requests and puts the
 // resulting Principal into the context. Requests without credentials stay
-// anonymous (reading is open, access: $all); other schemes such as Basic are
-// bootstrap-only for the login endpoint and ignored elsewhere.
+// anonymous; package reads then require the read scope (see pkg.go). Other
+// schemes such as Basic are bootstrap-only for the login endpoint and
+// ignored elsewhere.
 func bearer(svc *auth.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

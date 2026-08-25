@@ -135,7 +135,8 @@ func TestPublishHappyPath(t *testing.T) {
 		} `json:"_attachments"`
 		Maintainers []map[string]string `json:"maintainers"`
 	}
-	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg, nil, nil)
+	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+		map[string]string{"Authorization": "Bearer " + token}, nil)
 	if man.Code != http.StatusOK {
 		t.Fatalf("manifest status = %d, body %s", man.Code, man.Body.String())
 	}
@@ -166,7 +167,8 @@ func TestPublishHappyPath(t *testing.T) {
 	}
 
 	// the tarball is downloadable and byte-identical
-	dl := doReq(t, ts.handler, http.MethodGet, "/@acme/lib/-/lib-1.0.0.tgz", nil, nil)
+	dl := doReq(t, ts.handler, http.MethodGet, "/@acme/lib/-/lib-1.0.0.tgz",
+		map[string]string{"Authorization": "Bearer " + token}, nil)
 	if dl.Code != http.StatusOK || !bytes.Equal(dl.Body.Bytes(), tar) {
 		t.Fatalf("tarball download: status %d, %d bytes", dl.Code, dl.Body.Len())
 	}
@@ -189,7 +191,8 @@ func TestPublishSecondVersion(t *testing.T) {
 		t.Errorf("body = %q, want contains %q", rec.Body.String(), want)
 	}
 
-	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg, nil, nil)
+	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+		map[string]string{"Authorization": "Bearer " + token}, nil)
 	var doc struct {
 		Versions map[string]json.RawMessage `json:"versions"`
 		Tags     map[string]string          `json:"dist-tags"`
@@ -439,7 +442,8 @@ func TestPublishConcurrentVersions(t *testing.T) {
 		}
 	}
 
-	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg, nil, nil)
+	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+		map[string]string{"Authorization": "Bearer " + token}, nil)
 	var doc struct {
 		Versions map[string]json.RawMessage `json:"versions"`
 	}

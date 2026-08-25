@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
 	"server/internal/database"
@@ -29,10 +30,21 @@ func newTestServer(t *testing.T) *testServer {
 		TokenTTL:    time.Hour,
 		DelayBase:   time.Nanosecond,
 		DelayCap:    time.Microsecond,
-	})
+	}, access.Default())
 }
 
-func newTestServerWithAuth(t *testing.T, cfg auth.Config) *testServer {
+// newTestServerWithRules runs the router on custom packages-access rules.
+func newTestServerWithRules(t *testing.T, rules []access.Rule) *testServer {
+	t.Helper()
+	return newTestServerWithAuth(t, auth.Config{
+		AllowSignup: true,
+		TokenTTL:    time.Hour,
+		DelayBase:   time.Nanosecond,
+		DelayCap:    time.Microsecond,
+	}, rules)
+}
+
+func newTestServerWithAuth(t *testing.T, cfg auth.Config, rules []access.Rule) *testServer {
 	t.Helper()
 	dir := t.TempDir()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -57,7 +69,7 @@ func newTestServerWithAuth(t *testing.T, cfg auth.Config) *testServer {
 	store := storage.NewLocal(filepath.Join(dir, "packages"))
 
 	return &testServer{
-		handler:   New(log, store, svc, auditor),
+		handler:   New(log, store, svc, auditor, rules),
 		auth:      svc,
 		store:     store,
 		auditPath: filepath.Join(dir, "audit.jsonl"),

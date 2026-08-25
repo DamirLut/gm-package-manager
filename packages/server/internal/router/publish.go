@@ -14,6 +14,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
+	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
 	"server/internal/storage"
@@ -48,7 +49,7 @@ type publishResponse struct {
 }
 
 // PUT /<pkg> — npm publish contract: statuses are protocol, messages are not.
-func handlePublish(store storage.Storage, auditor *audit.Logger) http.HandlerFunc {
+func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name, rest := splitPkg(r.URL.Path)
 		if name == "" || rest != "" {
@@ -57,7 +58,8 @@ func handlePublish(store storage.Storage, auditor *audit.Logger) http.HandlerFun
 		}
 
 		p, _ := auth.UserFrom(r.Context())
-		if p == nil || !p.Can(auth.ActionPublish, name) {
+		if p == nil || !p.Can(auth.ActionPublish, name) ||
+			!access.Allow(rules, auth.ActionPublish, name, p) {
 			actor := ""
 			if p != nil {
 				actor = p.Name

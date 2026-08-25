@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
 	"server/internal/database"
@@ -44,6 +45,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	rules, err := access.FromEnv(log)
+	if err != nil {
+		log.Error("access config failed", "err", err)
+		os.Exit(1)
+	}
+
 	auditor, err := audit.New(filepath.Join(store.Root(), "audit.jsonl"), log)
 	if err != nil {
 		log.Error("audit initialization failed", "err", err)
@@ -51,7 +58,7 @@ func main() {
 	}
 	defer auditor.Close()
 
-	r := router.New(log, store, authSvc, auditor)
+	r := router.New(log, store, authSvc, auditor, rules)
 
 	srv := &http.Server{
 		Addr:    addr,

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"server/internal/access"
 	"server/internal/auth"
 )
 
@@ -154,7 +155,7 @@ func TestLoginUnknownUserSignupDisabled(t *testing.T) {
 		TokenTTL:    time.Hour,
 		DelayBase:   time.Nanosecond,
 		DelayCap:    time.Microsecond,
-	})
+	}, access.Default())
 
 	req := httptest.NewRequest(http.MethodPut, loginPath, nil)
 	req.SetBasicAuth("stranger", "pw")
