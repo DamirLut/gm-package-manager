@@ -7,7 +7,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/main
 
-FROM alpine:3.22
+FROM alpine:3.24
 RUN adduser -D -H -u 10001 server && mkdir -p /data && chown server /data
 
 COPY --from=build /out/server /usr/local/bin/server
