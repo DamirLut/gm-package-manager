@@ -107,6 +107,20 @@ func (s *Local) ListPackages(_ context.Context) ([]string, error) {
 	return pkgs, nil
 }
 
+// DeletePackage removes the manifest, all tarballs and the package
+// directory itself; an emptied scope directory is cleaned up best-effort.
+func (s *Local) DeletePackage(_ context.Context, pkg string) error {
+	if !validPkg(pkg) {
+		return fmt.Errorf("storage: invalid package name %q", pkg)
+	}
+	dir := filepath.Join(s.root, filepath.FromSlash(pkg))
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	os.Remove(filepath.Dir(dir))
+	return nil
+}
+
 func (s *Local) Lock(pkg string) func() {
 	s.lockMu.Lock()
 	mu, ok := s.pkgLock[pkg]

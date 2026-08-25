@@ -267,3 +267,36 @@ func TestFromEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestDeletePackage(t *testing.T) {
+	s := NewLocal(t.TempDir())
+	ctx := context.Background()
+
+	if _, err := s.PutTarball(ctx, "@acme/lib", "lib-1.0.0.tgz", strings.NewReader("tar")); err != nil {
+		t.Fatalf("seed tarball: %v", err)
+	}
+	if err := s.PutManifest(ctx, "@acme/lib", []byte(`{"name":"@acme/lib"}`)); err != nil {
+		t.Fatalf("seed manifest: %v", err)
+	}
+	if err := s.PutManifest(ctx, "@acme/other", []byte(`{"name":"@acme/other"}`)); err != nil {
+		t.Fatalf("seed other: %v", err)
+	}
+
+	if err := s.DeletePackage(ctx, "@acme/lib"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+
+	if _, err := s.GetManifest(ctx, "@acme/lib"); !errors.Is(err, ErrNotExist) {
+		t.Errorf("manifest after delete: err = %v, want ErrNotExist", err)
+	}
+	if _, _, err := s.GetTarball(ctx, "@acme/lib", "lib-1.0.0.tgz"); !errors.Is(err, ErrNotExist) {
+		t.Errorf("tarball after delete: err = %v, want ErrNotExist", err)
+	}
+	pkgs, err := s.ListPackages(ctx)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if !slices.Equal(pkgs, []string{"@acme/other"}) {
+		t.Errorf("packages = %v, want [@acme/other]", pkgs)
+	}
+}

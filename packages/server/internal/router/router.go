@@ -40,6 +40,9 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	// so the package path is parsed manually (see pkg.go)
 	r.Get("/*", handlePkg(store, auditor, rules))
 
+	// npm unpublish (see unpublish.go)
+	r.Delete("/*", handleUnpublish(store, auditor, rules))
+
 	return r
 }
 

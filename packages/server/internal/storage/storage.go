@@ -17,6 +17,7 @@ type Storage interface {
 	PutManifest(ctx context.Context, pkg string, data []byte) error
 	GetTarball(ctx context.Context, pkg, filename string) (io.ReadCloser, int64, error)
 	PutTarball(ctx context.Context, pkg, filename string, data io.Reader) (int64, error)
+	DeletePackage(ctx context.Context, pkg string) error
 	ListPackages(ctx context.Context) ([]string, error)
 	Lock(pkg string) (unlock func())
 }

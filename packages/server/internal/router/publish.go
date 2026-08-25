@@ -2,13 +2,16 @@ package router
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -171,6 +174,7 @@ func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.
 
 		now := time.Now().UTC().Format(time.RFC3339)
 		doc["_id"], doc["name"] = name, name
+		doc["_rev"] = nextRev(doc)
 
 		verObj := verDocument(verRaw, tarballURL(r, name, filename), shasum)
 		versions[version] = verObj
@@ -309,4 +313,23 @@ func tarballURL(r *http.Request, name, filename string) string {
 		scheme = "https"
 	}
 	return scheme + "://" + r.Host + "/" + name + "/-/" + filename
+}
+
+// nextRev produces the CouchDB-style revision "N-<hash>" npm unpublish
+// sends back via DELETE /<pkg>/-rev/:rev.
+func nextRev(doc map[string]any) string {
+	n := 0
+	if cur, ok := doc["_rev"].(string); ok {
+		v, err := strconv.Atoi(strings.SplitN(cur, "-", 2)[0])
+		if err == nil {
+			n = v
+		}
+	}
+	return fmt.Sprintf("%d-%s", n+1, randomSuffix())
+}
+
+func randomSuffix() string {
+	var b [4]byte
+	rand.Read(b[:])
+	return hex.EncodeToString(b[:])
 }
