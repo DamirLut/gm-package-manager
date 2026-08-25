@@ -1,0 +1,14 @@
+node_modules/
+.svelte-kit/
+build/
+
+.env
+.env.*
+.vscode/
+
+project.inlang/cache/
+src/lib/paraglide/
+
+README.md
+Dockerfile
+.dockerignore
