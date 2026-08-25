@@ -1,6 +1,9 @@
 package router
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -9,6 +12,8 @@ import (
 
 	"server/internal/storage"
 )
+
+const abbrevType = "application/vnd.npm.install-v1+json"
 
 // splitPkg splits a request path into a package name and the rest.
 // net/http puts an already-decoded string into r.URL.Path, so all
@@ -52,6 +57,9 @@ func handlePkg(store storage.Storage) http.HandlerFunc {
 	}
 }
 
+// serveManifest answers with the full document, or the abbreviated form when
+// the client asks for npm's install-v1 media type; both carry an ETag and
+// honor If-None-Match with 304.
 func serveManifest(w http.ResponseWriter, r *http.Request, store storage.Storage, name string) {
 	data, err := store.GetManifest(r.Context(), name)
 	if errors.Is(err, storage.ErrNotExist) {
@@ -62,9 +70,26 @@ func serveManifest(w http.ResponseWriter, r *http.Request, store storage.Storage
 		WriteError(w, ErrInternal)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+
+	body, contentType := data, "application/json"
+	if strings.Contains(r.Header.Get("Accept"), abbrevType) {
+		body, err = abbreviate(data)
+		if err != nil {
+			WriteError(w, ErrInternal)
+			return
+		}
+		contentType = abbrevType
+	}
+
+	etag := etagOf(body)
+	w.Header().Set("ETag", etag)
+	if ifNoneMatch(r.Header.Get("If-None-Match"), etag) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	w.Write(body)
 }
 
 func serveTarball(w http.ResponseWriter, r *http.Request, store storage.Storage, name, filename string) {
@@ -83,4 +108,77 @@ func serveTarball(w http.ResponseWriter, r *http.Request, store storage.Storage,
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	w.WriteHeader(http.StatusOK)
 	io.Copy(w, rc)
+}
+
+func etagOf(body []byte) string {
+	sum := sha256.Sum256(body)
+	return `"` + hex.EncodeToString(sum[:]) + `"`
+}
+
+// ifNoneMatch applies RFC 7232 weak comparison to a comma-separated header.
+func ifNoneMatch(header, etag string) bool {
+	for _, cand := range strings.Split(header, ",") {
+		cand = strings.Trim(strings.TrimPrefix(strings.TrimSpace(cand), "W/"), `"`)
+		if cand == strings.Trim(etag, `"`) {
+			return true
+		}
+	}
+	return false
+}
+
+// abbrevKeys is npm's install-v1 subset plus gm: gmpm reads gm.destination
+// from metadata without downloading the tarball first.
+var abbrevKeys = map[string]struct{}{
+	"name": {}, "version": {},
+	"dependencies": {}, "optionalDependencies": {},
+	"peerDependencies": {}, "peerDependenciesMeta": {},
+	"bundleDependencies": {}, "bundledDependencies": {},
+	"bin": {}, "directories": {}, "engines": {},
+	"os": {}, "cpu": {}, "funding": {}, "deprecated": {},
+	"_hasShrinkwrap": {}, "workspaces": {},
+	"dist": {}, "gm": {},
+}
+
+type abbrevDoc struct {
+	Name     string                     `json:"name"`
+	DistTags map[string]string          `json:"dist-tags"`
+	Modified string                     `json:"modified,omitempty"`
+	Versions map[string]json.RawMessage `json:"versions"`
+}
+
+func abbreviate(data []byte) ([]byte, error) {
+	var full struct {
+		Name     string                     `json:"name"`
+		DistTags map[string]string          `json:"dist-tags"`
+		Time     map[string]string          `json:"time"`
+		Versions map[string]json.RawMessage `json:"versions"`
+	}
+	if err := json.Unmarshal(data, &full); err != nil {
+		return nil, err
+	}
+
+	out := abbrevDoc{
+		Name:     full.Name,
+		DistTags: full.DistTags,
+		Modified: full.Time["modified"],
+		Versions: make(map[string]json.RawMessage, len(full.Versions)),
+	}
+	for v, raw := range full.Versions {
+		var obj map[string]json.RawMessage
+		if json.Unmarshal(raw, &obj) != nil {
+			continue
+		}
+		filtered := make(map[string]json.RawMessage, len(obj))
+		for k, val := range obj {
+			if _, keep := abbrevKeys[k]; keep {
+				filtered[k] = val
+			}
+		}
+		enc, err := json.Marshal(filtered)
+		if err != nil {
+			return nil, err
+		}
+		out.Versions[v] = enc
+	}
+	return json.Marshal(out)
 }

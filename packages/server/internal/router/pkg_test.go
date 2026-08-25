@@ -119,6 +119,114 @@ func TestTarballDownload(t *testing.T) {
 	}
 }
 
+func TestManifestETag(t *testing.T) {
+	ts := newTestServer(t)
+	token := loginToken(t, ts, "alice")
+	if rec := doPublish(ts, token, "/@acme/lib",
+		publishPayload(t, "@acme/lib", "1.0.0", []byte("tar"), nil), ""); rec.Code != http.StatusCreated {
+		t.Fatalf("publish: status %d", rec.Code)
+	}
+	headers := map[string]string{"Authorization": "Bearer " + token}
+
+	rec := doReq(t, ts.handler, http.MethodGet, "/@acme/lib", headers, nil)
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("no ETag header")
+	}
+
+	for _, match := range []string{etag, "W/" + etag} {
+		h := map[string]string{"Authorization": headers["Authorization"], "If-None-Match": match}
+		rec := doReq(t, ts.handler, http.MethodGet, "/@acme/lib", h, nil)
+		if rec.Code != http.StatusNotModified {
+			t.Errorf("If-None-Match %q: status = %d, want 304", match, rec.Code)
+		}
+		if rec.Body.Len() != 0 {
+			t.Errorf("If-None-Match %q: body = %q, want empty", match, rec.Body.String())
+		}
+	}
+
+	// changed content must produce a different ETag
+	if rec := doPublish(ts, token, "/@acme/lib",
+		publishPayload(t, "@acme/lib", "1.1.0", []byte("tar2"), nil), ""); rec.Code != http.StatusCreated {
+		t.Fatalf("second publish: status %d", rec.Code)
+	}
+	rec = doReq(t, ts.handler, http.MethodGet, "/@acme/lib", headers, nil)
+	if again := rec.Header().Get("ETag"); again == etag {
+		t.Error("ETag unchanged after publish")
+	}
+}
+
+func TestAbbreviatedManifest(t *testing.T) {
+	ts := newTestServer(t)
+	token := loginToken(t, ts, "alice")
+
+	payload := publishPayload(t, publishPkg, "1.0.0", []byte("tar"), func(b map[string]any) {
+		v := versionOf(t, b)
+		v["dependencies"] = map[string]string{"left-pad": "^1.3.0"}
+		v["readme"] = "long readme text"
+	})
+	if rec := doPublish(ts, token, "/"+publishPkg, payload, ""); rec.Code != http.StatusCreated {
+		t.Fatalf("publish: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	full := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+		map[string]string{"Authorization": "Bearer " + token}, nil)
+	var fullDoc struct {
+		Versions map[string]map[string]json.RawMessage `json:"versions"`
+	}
+	json.Unmarshal(full.Body.Bytes(), &fullDoc)
+	if _, ok := fullDoc.Versions["1.0.0"]["gm"]; !ok {
+		t.Fatal("full manifest lost gm")
+	}
+	if _, ok := fullDoc.Versions["1.0.0"]["readme"]; !ok {
+		t.Fatal("full manifest lost readme")
+	}
+
+	rec := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg, map[string]string{
+		"Authorization": "Bearer " + token,
+		"Accept":        "application/vnd.npm.install-v1+json",
+	}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("abbreviated status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != abbrevType {
+		t.Errorf("content-type = %q, want %q", ct, abbrevType)
+	}
+
+	var abbr struct {
+		Name     string                     `json:"name"`
+		DistTags map[string]string          `json:"dist-tags"`
+		Modified string                     `json:"modified"`
+		Versions map[string]json.RawMessage `json:"versions"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &abbr); err != nil {
+		t.Fatalf("unmarshal abbreviated: %v", err)
+	}
+	if abbr.Name != publishPkg || abbr.DistTags["latest"] != "1.0.0" || abbr.Modified == "" {
+		t.Errorf("abbreviated top level wrong: %+v", abbr)
+	}
+
+	var ver map[string]any
+	if err := json.Unmarshal(abbr.Versions["1.0.0"], &ver); err != nil {
+		t.Fatalf("unmarshal version entry: %v", err)
+	}
+	if _, ok := ver["dependencies"]; !ok {
+		t.Error("abbreviated version lost dependencies")
+	}
+	if _, ok := ver["gm"]; !ok {
+		t.Error("abbreviated version lost gm")
+	}
+	dist, ok := ver["dist"].(map[string]any)
+	if !ok || dist["tarball"] == "" {
+		t.Error("abbreviated version lost dist.tarball")
+	}
+	for _, gone := range []string{"readme", "description", "author"} {
+		if _, ok := ver[gone]; ok {
+			t.Errorf("abbreviated version should drop %s", gone)
+		}
+	}
+}
+
 func TestAuditStub(t *testing.T) {
 	h := newTestServer(t).handler
 
