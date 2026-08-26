@@ -77,4 +77,63 @@ func TestWebSidebarAndReadme(t *testing.T) {
 			t.Errorf("%s status = %d, want 404", path, got.Code)
 		}
 	}
+
+	// a second publish moves dist-tags.latest to the new version
+	if rec := doPublish(ts, token, "/"+publishPkg,
+		publishPayload(t, publishPkg, "1.1.0", []byte("tar2"), func(body map[string]any) {
+			versionOf(t, body)["readme"] = "# DebuggerDump\n\nSecond version readme."
+		}), ""); rec.Code != http.StatusCreated {
+		t.Fatalf("second publish: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	// without ?v= both calls keep serving dist-tags.latest
+	rd = doReq(t, ts.handler, http.MethodGet,
+		"/-/verdaccio/data/package/readme/"+url.PathEscape(publishPkg), nil, nil)
+	if rd.Code != http.StatusOK || rd.Body.String() != "# DebuggerDump\n\nSecond version readme." {
+		t.Errorf("latest readme = %q, status %d", rd.Body.String(), rd.Code)
+	}
+	sb = doReq(t, ts.handler, http.MethodGet,
+		"/-/verdaccio/data/sidebar/"+url.PathEscape(publishPkg), nil, nil)
+	if sb.Code != http.StatusOK {
+		t.Fatalf("sidebar status = %d", sb.Code)
+	}
+	if err := json.Unmarshal(sb.Body.Bytes(), &side); err != nil {
+		t.Fatalf("unmarshal sidebar: %v", err)
+	}
+	if side.Latest["version"] != "1.1.0" || side.DistTags["latest"] != "1.1.0" {
+		t.Errorf("latest = %v, dist-tags = %v, want 1.1.0", side.Latest["version"], side.DistTags)
+	}
+
+	// ?v= selects a specific version: the named one becomes "latest" in the
+	// sidebar while dist-tags keep pointing at the real latest
+	sb = doReq(t, ts.handler, http.MethodGet,
+		"/-/verdaccio/data/sidebar/"+url.PathEscape(publishPkg)+"?v=1.0.0", nil, nil)
+	if sb.Code != http.StatusOK {
+		t.Fatalf("sidebar?v= status = %d", sb.Code)
+	}
+	if err := json.Unmarshal(sb.Body.Bytes(), &side); err != nil {
+		t.Fatalf("unmarshal sidebar?v=: %v", err)
+	}
+	if side.Latest["version"] != "1.0.0" || side.DistTags["latest"] != "1.1.0" {
+		t.Errorf("sidebar?v=1.0.0: latest = %v, dist-tags = %v", side.Latest["version"], side.DistTags)
+	}
+
+	rd = doReq(t, ts.handler, http.MethodGet,
+		"/-/verdaccio/data/package/readme/"+url.PathEscape(publishPkg)+"?v=1.0.0", nil, nil)
+	if rd.Code != http.StatusOK {
+		t.Fatalf("readme?v= status = %d", rd.Code)
+	}
+	if got := rd.Body.String(); got != readme {
+		t.Errorf("readme?v=1.0.0 = %q, want %q", got, readme)
+	}
+
+	// an unknown version is a clean 404 for both calls
+	for _, path := range []string{
+		"/-/verdaccio/data/package/readme/" + url.PathEscape(publishPkg) + "?v=9.9.9",
+		"/-/verdaccio/data/sidebar/" + url.PathEscape(publishPkg) + "?v=9.9.9",
+	} {
+		if got := doReq(t, ts.handler, http.MethodGet, path, nil, nil); got.Code != http.StatusNotFound {
+			t.Errorf("%s status = %d, want 404", path, got.Code)
+		}
+	}
 }
