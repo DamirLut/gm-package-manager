@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Markdown from 'svelte-exmarkdown';
+	import Markdown, { denylist } from 'svelte-exmarkdown';
 	import { gfmPlugin } from 'svelte-exmarkdown/gfm';
 	import { m } from '$lib/paraglide/messages';
 	import Tabs from '$lib/components/uikit/Tabs.svelte';
@@ -16,6 +16,12 @@
 
 	let activeTab = $state('readme');
 
+	// TODO: READMEs come from untrusted package publishers and should be
+	// sanitized with a real XSS-safe pipeline (e.g. rehype-sanitize or DOMPurify
+	// with an explicit tag/attribute allowlist, ideally on the server) instead
+	// of relying on Svelte text escaping plus this manual img blocklist.
+	const readmePlugins = [gfmPlugin(), denylist(['img'])];
+
 	const tabs = [
 		{ id: 'readme', label: m.readme() },
 		{ id: 'dependencies', label: m.dependencies() },
@@ -31,7 +37,7 @@
 			<Card>
 				{#if activeTab === 'readme'}
 					<div class="readme">
-						<Markdown md={data.readme} plugins={[gfmPlugin()]} />
+						<Markdown md={data.readme} plugins={readmePlugins} />
 					</div>
 				{:else if activeTab === 'dependencies'}
 					<ul class="list">
