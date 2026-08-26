@@ -69,10 +69,7 @@ func latestVersion(ctx context.Context, store storage.Storage, name string) (map
 	if json.Unmarshal(raw, &info) != nil {
 		return nil, fmt.Errorf("broken version %s", latest)
 	}
-	// npm doesn't always send _id, but clients key entries by it
-	if _, ok := info["_id"]; !ok {
-		info["_id"] = name + "@" + latest
-	}
+	info["_id"] = name + "@" + latest
 	info["time"] = doc.Time[latest]
 	return info, nil
 }

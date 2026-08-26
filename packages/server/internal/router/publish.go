@@ -181,7 +181,7 @@ func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.
 		doc["_id"], doc["name"] = name, name
 		doc["_rev"] = nextRev(doc)
 
-		verObj := verDocument(verRaw, tarballURL(r, name, filename), shasum)
+		verObj := verDocument(verRaw, name, version, tarballURL(r, name, filename), shasum)
 		stampAuthor(verObj, p.Name)
 		versions[version] = verObj
 		doc["versions"] = versions
@@ -298,12 +298,15 @@ func verField(raw json.RawMessage, field string) (any, bool) {
 	return v, ok
 }
 
-// fills in dist.tarball/shasum, keeps everything else as sent.
-func verDocument(raw json.RawMessage, tarballURL, shasum string) map[string]any {
+func verDocument(raw json.RawMessage, name, version, tarballURL, shasum string) map[string]any {
 	obj := map[string]any{}
 	if json.Unmarshal(raw, &obj) != nil {
 		obj = map[string]any{}
 	}
+	obj["_id"] = name + "@" + version
+	delete(obj, "_npmVersion")
+	delete(obj, "_nodeVersion")
+	delete(obj, "scripts")
 	dist := asMap(obj["dist"])
 	dist["tarball"], dist["shasum"] = tarballURL, shasum
 	obj["dist"] = dist

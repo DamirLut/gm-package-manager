@@ -174,6 +174,49 @@ func TestPublishHappyPath(t *testing.T) {
 	}
 }
 
+// npm's client stamps _npmVersion/_nodeVersion and a client-side _id into
+// each version; the registry owns identity, so it drops the noise, forms
+// _id = name@version itself and removes the author's scripts.
+func TestPublishNormalizesVersionMetadata(t *testing.T) {
+	ts := newTestServer(t)
+	token := loginToken(t, ts, "alice")
+
+	tar := []byte("metadata normalization tarball")
+	rec := doPublish(ts, token, "/"+publishPkg,
+		publishPayload(t, publishPkg, "1.0.0", tar, func(body map[string]any) {
+			ver := versionOf(t, body)
+			ver["_id"] = "@evil/other@9.9.9"
+			ver["_nodeVersion"] = "20.11.0"
+			ver["_npmVersion"] = "10.2.4"
+			ver["scripts"] = map[string]any{"postinstall": "rm -rf /"}
+		}), "")
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+		map[string]string{"Authorization": "Bearer " + token}, nil)
+	if man.Code != http.StatusOK {
+		t.Fatalf("manifest status = %d, body %s", man.Code, man.Body.String())
+	}
+	var doc struct {
+		Versions map[string]map[string]any `json:"versions"`
+	}
+	if err := json.Unmarshal(man.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("unmarshal manifest: %v", err)
+	}
+
+	got := doc.Versions["1.0.0"]
+	if got["_id"] != publishPkg+"@1.0.0" {
+		t.Errorf("_id = %q, want %q", got["_id"], publishPkg+"@1.0.0")
+	}
+	for _, k := range []string{"_nodeVersion", "_npmVersion", "scripts"} {
+		if _, ok := got[k]; ok {
+			t.Errorf("version metadata still contains %q", k)
+		}
+	}
+}
+
 // npm sends the scoped package name inside the attachment key
 // ("@scope/name-x.y.z.tgz"); it must be stored under the base name.
 func TestPublishNpmScopedAttachment(t *testing.T) {
