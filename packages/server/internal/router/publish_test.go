@@ -174,6 +174,56 @@ func TestPublishHappyPath(t *testing.T) {
 	}
 }
 
+// npm sends the scoped package name inside the attachment key
+// ("@scope/name-x.y.z.tgz"); it must be stored under the base name.
+func TestPublishNpmScopedAttachment(t *testing.T) {
+	ts := newTestServer(t)
+	token := loginToken(t, ts, "alice")
+
+	tar := []byte("scoped tarball bytes")
+	rec := doPublish(ts, token, "/"+publishPkg,
+		publishPayload(t, publishPkg, "1.0.0", tar, func(body map[string]any) {
+			body["_attachments"] = map[string]any{
+				"@acme/lib-1.0.0.tgz": map[string]any{
+					"data":         base64.StdEncoding.EncodeToString(tar),
+					"length":       len(tar),
+					"content_type": "application/octet-stream",
+				},
+			}
+		}), "")
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var doc struct {
+		Versions map[string]struct {
+			Dist struct {
+				Tarball string `json:"tarball"`
+			} `json:"dist"`
+		} `json:"versions"`
+		Attaches map[string]any `json:"_attachments"`
+	}
+	man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg, nil, nil)
+	if man.Code != http.StatusOK {
+		t.Fatalf("manifest status = %d", man.Code)
+	}
+	if err := json.Unmarshal(man.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("unmarshal manifest: %v", err)
+	}
+	wantURL := "http://example.com/@acme/lib/-/lib-1.0.0.tgz"
+	if got := doc.Versions["1.0.0"].Dist.Tarball; got != wantURL {
+		t.Errorf("dist.tarball = %q, want %q", got, wantURL)
+	}
+	if _, ok := doc.Attaches["lib-1.0.0.tgz"]; !ok {
+		t.Errorf("_attachments keys = %v, want lib-1.0.0.tgz", doc.Attaches)
+	}
+
+	dl := doReq(t, ts.handler, http.MethodGet, "/@acme/lib/-/lib-1.0.0.tgz", nil, nil)
+	if dl.Code != http.StatusOK || !bytes.Equal(dl.Body.Bytes(), tar) {
+		t.Fatalf("tarball download: status %d, %d bytes", dl.Code, dl.Body.Len())
+	}
+}
+
 func TestPublishSecondVersion(t *testing.T) {
 	ts := newTestServer(t)
 	token := loginToken(t, ts, "alice")

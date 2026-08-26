@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,9 @@ func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.
 
 		version, verRaw, _ := onlyKey(body.Versions)
 		filename, att, _ := onlyKey(body.Attaches)
+		// npm names scoped tarballs "@scope/name-x.y.z.tgz" but storage
+		// keeps one flat directory per package; store and serve by base name.
+		filename = path.Base(filename)
 
 		ver, err := semver.StrictNewVersion(version)
 		if err != nil {
