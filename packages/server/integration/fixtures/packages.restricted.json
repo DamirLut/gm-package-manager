@@ -1,0 +1,19 @@
+{
+	"packages": [
+		{
+			"pattern": "@private/**",
+			"access": ["$authenticated"],
+			"publish": ["alice"]
+		},
+		{
+			"pattern": "@restricted/**",
+			"access": ["$all"],
+			"publish": ["alice"]
+		},
+		{
+			"pattern": "**",
+			"access": ["$all"],
+			"publish": ["$authenticated"]
+		}
+	]
+}
