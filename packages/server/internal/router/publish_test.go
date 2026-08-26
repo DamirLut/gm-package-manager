@@ -447,6 +447,60 @@ func TestPublishValidationChain(t *testing.T) {
 	}
 }
 
+// author is stamped from the token's username whatever the payload contains.
+func TestPublishAuthorFromToken(t *testing.T) {
+	ts := newTestServer(t)
+	token := loginToken(t, ts, "alice")
+
+	tests := []struct {
+		name   string
+		author any // nil omits the field entirely
+	}{
+		{name: "missing author"},
+		{name: "string author", author: "Bob <bob@example.com>"},
+		{name: "spoofed author", author: map[string]any{
+			"name":   "mallory",
+			"avatar": "https://evil.example/m.png",
+		}},
+	}
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version := fmt.Sprintf("1.%d.0", i)
+			payload := publishPayload(t, publishPkg, version, []byte("tar-"+version), func(b map[string]any) {
+				if tt.author != nil {
+					versionOf(t, b)["author"] = tt.author
+				}
+			})
+			if rec := doPublish(ts, token, "/"+publishPkg, payload, ""); rec.Code != http.StatusCreated {
+				t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+			}
+
+			var doc struct {
+				Versions map[string]struct {
+					Author struct {
+						Name   string `json:"name"`
+						Avatar string `json:"avatar"`
+					} `json:"author"`
+				} `json:"versions"`
+			}
+			man := doReq(t, ts.handler, http.MethodGet, "/"+publishPkg,
+				map[string]string{"Authorization": "Bearer " + token}, nil)
+			if man.Code != http.StatusOK {
+				t.Fatalf("manifest status = %d, body %s", man.Code, man.Body.String())
+			}
+			if err := json.Unmarshal(man.Body.Bytes(), &doc); err != nil {
+				t.Fatalf("unmarshal manifest: %v", err)
+			}
+
+			got := doc.Versions[version].Author
+			wantAvatar := "https://blobatar.dev/avatar/alice?gen=2"
+			if got.Name != "alice" || got.Avatar != wantAvatar {
+				t.Errorf("author = {name:%q avatar:%q}, want {name:alice avatar:%s}", got.Name, got.Avatar, wantAvatar)
+			}
+		})
+	}
+}
+
 func TestPublishDuplicateVersionConflict(t *testing.T) {
 	ts := newTestServer(t)
 	token := loginToken(t, ts, "alice")

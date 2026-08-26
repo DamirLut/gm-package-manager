@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -181,6 +182,7 @@ func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.
 		doc["_rev"] = nextRev(doc)
 
 		verObj := verDocument(verRaw, tarballURL(r, name, filename), shasum)
+		stampAuthor(verObj, p.Name)
 		versions[version] = verObj
 		doc["versions"] = versions
 
@@ -306,6 +308,17 @@ func verDocument(raw json.RawMessage, tarballURL, shasum string) map[string]any 
 	dist["tarball"], dist["shasum"] = tarballURL, shasum
 	obj["dist"] = dist
 	return obj
+}
+
+func stampAuthor(ver map[string]any, actor string) {
+	author := asMap(ver["author"])
+	ver["author"] = author
+	author["name"] = actor
+	author["avatar"] = avatarURL(actor)
+}
+
+func avatarURL(username string) string {
+	return "https://blobatar.dev/avatar/" + url.PathEscape(username) + "?gen=2"
 }
 
 // stored URLs must match how clients reach this server (reverse proxy included).
