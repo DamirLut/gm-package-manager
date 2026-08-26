@@ -33,6 +33,10 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	r.Get("/-/verdaccio/data/packages", handlePackages(store, logger))
 	r.Get("/-/packages", handlePackages(store, logger))
 
+	// website package page (see web.go)
+	r.Get("/-/verdaccio/data/sidebar/*", handleSidebar(store))
+	r.Get("/-/verdaccio/data/package/readme/*", handleReadme(store))
+
 	// npm publish (see publish.go)
 	r.Put("/*", handlePublish(store, auditor, rules))
 
