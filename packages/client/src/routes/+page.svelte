@@ -14,6 +14,8 @@
 			<li>
 				<PackageCard package={pkg} />
 			</li>
+		{:else}
+			<li class="empty">{m.packages_empty()}</li>
 		{/each}
 	</ul>
 </main>
@@ -34,5 +36,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+
+		.empty {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 32px 16px;
+			color: var(--gmui-color-neutral-400);
+			font-size: 14px;
+		}
 	}
 </style>
