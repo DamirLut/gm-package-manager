@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/server/go.mod
+      - name: go test
+        working-directory: packages/server
+        run: go test ./...
+      - name: go vet
+        working-directory: packages/server
+        run: go vet ./...
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build integration image
+        working-directory: packages/server
+        run: docker build -f integration/Dockerfile -t gmpm-integration .
+      - name: run integration tests
+        run: docker run --rm gmpm-integration
