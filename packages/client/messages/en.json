@@ -7,5 +7,6 @@
 	"published": "Published {time}",
 	"readme": "README",
 	"dependencies": "Dependencies",
+	"dependencies_empty": "No dependencies",
 	"versions": "Versions"
 }

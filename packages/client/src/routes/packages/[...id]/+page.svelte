@@ -43,6 +43,8 @@
 					<ul class="list">
 						{#each dependencies as [name, range] (name)}
 							<li><span>{name}</span><span>{range}</span></li>
+						{:else}
+							<li class="empty">{m.dependencies_empty()}</li>
 						{/each}
 					</ul>
 				{:else if activeTab === 'versions'}

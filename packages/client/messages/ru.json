@@ -7,5 +7,6 @@
 	"published": "Опубликован {time}",
 	"readme": "README",
 	"dependencies": "Зависимости",
+	"dependencies_empty": "Нет зависимостей",
 	"versions": "Версии"
 }
