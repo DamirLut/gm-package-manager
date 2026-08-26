@@ -5,6 +5,12 @@ on:
     branches: [main]
     tags: ["*"]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.0.1)"
+        required: true
+        type: string
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -63,7 +69,9 @@ jobs:
 
   deploy:
     name: Deploy images
-    if: github.event_name == 'push' && github.ref_type == 'tag'
+    if: >-
+      (github.event_name == 'push' && github.ref_type == 'tag') ||
+      github.event_name == 'workflow_dispatch'
     needs: [client, server]
     runs-on: ubuntu-latest
     permissions:
@@ -93,7 +101,7 @@ jobs:
           context: ${{ matrix.context }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}:${{ inputs.tag || github.ref_name }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
