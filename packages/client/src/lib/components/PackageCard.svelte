@@ -6,7 +6,7 @@
 	import VersionsIcon from '$lib/components/uikit/icons/VersionsIcon.svelte';
 	import Card from '$lib/components/uikit/Card.svelte';
 	import { m } from '$lib/paraglide/messages';
-	import { formatRelativeTime, gmIconBuilder } from '$lib/utils';
+	import { authorAvatarBuilder, formatRelativeTime, gmIconBuilder } from '$lib/utils';
 
 	type Props = {
 		package: Package;
@@ -29,7 +29,12 @@
 			<p class="description">{pkg.gm.shortDescription || pkg.description}</p>
 			<footer>
 				<span class="meta author">
-					<img src={pkg.author.avatar} alt={pkg.author.name} width="16" height="16" />
+					<img
+						src={authorAvatarBuilder(pkg.author.avatar, pkg.author.name)}
+						alt={pkg.author.name}
+						width="16"
+						height="16"
+					/>
 					{pkg.author.name}
 				</span>
 				<span class="meta">

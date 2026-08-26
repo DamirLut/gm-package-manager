@@ -7,6 +7,11 @@ export function gmIconBuilder(icon: PackageIcon | undefined): string {
 	return '/icons/game-maker.svg';
 }
 
+export function authorAvatarBuilder(src: string, fallback?: string) {
+	if (src) return src;
+	return `https://blobatar.dev/avatar/${fallback}?gen=2`;
+}
+
 export function formatRelativeTime(date: string | Date): string {
 	const formatter = new Intl.RelativeTimeFormat(getLocale(), {
 		numeric: 'auto'
