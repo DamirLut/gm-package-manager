@@ -39,7 +39,6 @@ export type Package = {
 	};
 	contributors: string[];
 	time: string;
-	users: object;
 };
 
 export type PackageAuthor = {
@@ -77,9 +76,7 @@ export type PackageVersion = {
 export type PackageSidebar = {
 	versions: Record<string, PackageVersion>;
 	time: { modified: string; created: string } & Record<string, string>;
-	users: object;
 	'dist-tags': Record<string, string>;
-	_uplinks: object;
 	_id: string;
 	latest: PackageVersion;
 };
