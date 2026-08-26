@@ -8,5 +8,13 @@
 	"readme": "README",
 	"dependencies": "Dependencies",
 	"dependencies_empty": "No dependencies",
-	"versions": "Versions"
+	"versions": "Versions",
+	"error_not_found_title": "Not found",
+	"error_not_found_description": "The page you're looking for doesn't exist or has been moved.",
+	"error_generic_title": "Something went wrong",
+	"error_generic_description": "An unexpected error occurred. Please try again.",
+	"error_back_home": "Back to home",
+	"error_try_again": "Try again",
+	"error_window_title": "Error",
+	"error_close": "Close"
 }
