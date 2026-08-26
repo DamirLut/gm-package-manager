@@ -4,6 +4,7 @@
 	"packages": "Packages",
 	"packages_empty": "No packages yet",
 	"search_placeholder": "Search packages",
+	"search_no_results": "Nothing found",
 	"published": "Published {time}",
 	"readme": "README",
 	"dependencies": "Dependencies",

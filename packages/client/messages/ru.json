@@ -4,6 +4,7 @@
 	"packages": "Список пакетов",
 	"packages_empty": "Пакетов пока нет",
 	"search_placeholder": "Поиск пакетов",
+	"search_no_results": "Ничего не найдено",
 	"published": "Опубликован {time}",
 	"readme": "README",
 	"dependencies": "Зависимости",

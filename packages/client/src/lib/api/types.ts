@@ -21,6 +21,7 @@ export type Package = {
 	name: string;
 	version: string;
 	description: string;
+	keywords?: string[];
 	author: {
 		name: string;
 		avatar: string;

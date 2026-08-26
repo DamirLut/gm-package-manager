@@ -4,7 +4,7 @@
 	import type { Pathname } from '$app/types';
 	import { site } from '$lib/config';
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
-	import Header from '../lib/components/Header.svelte';
+	import Header from '../lib/components/header/Header.svelte';
 
 	import '../styles/global.scss';
 

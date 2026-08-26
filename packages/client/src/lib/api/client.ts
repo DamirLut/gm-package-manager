@@ -25,6 +25,19 @@ export async function getPackages(fetch: Fetch): Promise<Package[]> {
 	return response.json();
 }
 
+export async function searchPackages(fetch: Fetch, query: string): Promise<Package[]> {
+	const response = await fetch(`/-/verdaccio/data/search?q=${encodeURIComponent(query)}`);
+
+	if (!response.ok) {
+		throw new ApiError(
+			response.status,
+			`Failed to search packages: ${response.status} ${response.statusText}`
+		);
+	}
+
+	return response.json();
+}
+
 export async function getPackageReadme(fetch: Fetch, id: string): Promise<string> {
 	const response = await fetch(`/-/verdaccio/data/package/readme/${encodeURIComponent(id)}`);
 
