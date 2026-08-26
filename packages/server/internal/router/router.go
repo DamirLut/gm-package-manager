@@ -33,6 +33,9 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	r.Get("/-/verdaccio/data/packages", handlePackages(store, logger))
 	r.Get("/-/packages", handlePackages(store, logger))
 
+	// website search (see search.go)
+	r.Get("/-/verdaccio/data/search", handleSearch(store, logger))
+
 	// website package page (see web.go)
 	r.Get("/-/verdaccio/data/sidebar/*", handleSidebar(store))
 	r.Get("/-/verdaccio/data/package/readme/*", handleReadme(store))
