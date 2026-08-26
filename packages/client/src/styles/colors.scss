@@ -1,4 +1,5 @@
 :root {
+	--gmui-accent: #039d5b;
 	--gmui-color-neutral-900: #181818;
 	--gmui-color-neutral-850: #212121;
 	--gmui-color-neutral-800: #232323;
@@ -9,8 +10,10 @@
 	--gmui-color-neutral-500: #535353;
 	--gmui-color-neutral-400: #6b717c;
 	--gmui-color-warm-600: #4e453f;
-	--gmui-color-accent-600: #039d5b;
-	--gmui-color-accent-650: #07917d;
+	--gmui-color-accent-600: var(--gmui-accent);
+	--gmui-color-accent-650: oklch(
+		from var(--gmui-accent) calc(l - 0.023671) calc(c - 0.042437) calc(h + 22.8)
+	);
 
 	--gmui-bg-app: var(--gmui-color-neutral-850);
 	--gmui-bg-main: var(--gmui-color-neutral-700);
@@ -55,12 +58,14 @@
 	--gmui-window-border-active: var(--gmui-accent-primary);
 	--gmui-window-header-bg: var(--gmui-gradient-window-header);
 	--gmui-window-header-bg-active: var(--gmui-gradient-window-header-active);
+
 	--gmui-text-primary: #e1e1e1;
 	--gmui-text-secondary: #bdbdbd;
 
 	--gmui-color-warning: #ffe500;
 
 	--gmui-dialog-bg: #252525;
-	--gmui-dialog-border: #00a878;
-	--gmui-dialog-titlebar-accent: #008f70;
+	--gmui-dialog-border: oklch(
+		from var(--gmui-accent) calc(l + 0.035932) calc(c - 0.011725) calc(h + 8.797)
+	);
 }
