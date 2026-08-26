@@ -10,6 +10,8 @@
 	"dependencies": "Dependencies",
 	"dependencies_empty": "No dependencies",
 	"versions": "Versions",
+	"versions_current_tags": "Current tags",
+	"versions_history": "Version history",
 	"error_not_found_title": "Not found",
 	"error_not_found_description": "The page you're looking for doesn't exist or has been moved.",
 	"error_generic_title": "Something went wrong",

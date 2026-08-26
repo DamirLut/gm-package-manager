@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Markdown, { denylist } from 'svelte-exmarkdown';
 	import { gfmPlugin } from 'svelte-exmarkdown/gfm';
 	import { m } from '$lib/paraglide/messages';
@@ -10,8 +11,26 @@
 	let { data }: PageProps = $props();
 
 	const latest = $derived(data.sidebar.latest);
+	const latestVersion = $derived(data.sidebar['dist-tags'].latest);
+	const activeVersion = $derived(data.version ?? latestVersion);
 	const versionsCount = $derived(Object.keys(data.sidebar.versions).length);
-	const versions = $derived(Object.keys(data.sidebar.versions));
+
+	// dist-tags sorted by publish time of the version they point to, newest first
+	const timeOf = (version: string) => new Date(data.sidebar.time[version] ?? 0).getTime();
+	const tags = $derived(
+		Object.entries(data.sidebar['dist-tags']).sort((a, b) => timeOf(b[1]) - timeOf(a[1]))
+	);
+
+	// every version, newest first
+	const history = $derived(
+		Object.keys(data.sidebar.versions)
+			.map((version) => ({ version, time: data.sidebar.time[version] }))
+			.sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime())
+	);
+
+	const versionHref = (version: string) =>
+		resolve('/packages/[...id]', { id: `${data.sidebar._id}/v/${version}` });
+
 	const dependencies = $derived(Object.entries(latest.dependencies ?? {}));
 
 	let activeTab = $state('readme');
@@ -48,11 +67,39 @@
 						{/each}
 					</ul>
 				{:else if activeTab === 'versions'}
-					<ul class="list">
-						{#each versions as version (version)}
-							<li>{version}</li>
-						{/each}
-					</ul>
+					<div class="versions">
+						{#if tags.length}
+							<section>
+								<h2>{m.versions_current_tags()} ({tags.length})</h2>
+								<ul class="list">
+									{#each tags as [tag, version] (tag)}
+										<li>
+											<a href={versionHref(version)}>{tag}</a>
+											<span class="muted">{version}</span>
+											<span class="muted">{formatRelativeTime(data.sidebar.time[version])}</span>
+										</li>
+									{/each}
+								</ul>
+							</section>
+						{/if}
+
+						<section>
+							<h2>{m.versions_history()} ({history.length})</h2>
+							<ul class="list">
+								{#each history as { version, time } (version)}
+									<li class:active={version === activeVersion}>
+										<span class="name">
+											<a href={versionHref(version)}>{version}</a>
+											{#if version === latestVersion}
+												<span class="badge">{latestVersion}</span>
+											{/if}
+										</span>
+										<span class="muted">{time ? formatRelativeTime(time) : '—'}</span>
+									</li>
+								{/each}
+							</ul>
+						</section>
+					</div>
 				{/if}
 			</Card>
 		</div>
@@ -194,12 +241,70 @@
 		li {
 			display: flex;
 			justify-content: space-between;
+			align-items: center;
 			gap: 12px;
 			padding: 8px 0;
 
 			& + li {
-				border-top: 1px solid var(--gmui-bg-surface-muted);
+				border-top: 1px solid var(--gmui-border-default);
 			}
+		}
+	}
+
+	.versions {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+
+		section {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+
+			& + section {
+				padding-top: 16px;
+				border-top: 1px solid var(--gmui-border-default);
+			}
+		}
+
+		h2 {
+			font-size: 14px;
+			margin-bottom: 4px;
+		}
+
+		a {
+			font-weight: 700;
+			color: var(--gmui-accent-primary);
+			text-decoration: none;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+
+		.name {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.badge {
+			font-size: 11px;
+			font-weight: 700;
+			line-height: 1;
+			padding: 3px 6px;
+			border-radius: 999px;
+			color: var(--gmui-accent-primary);
+			background: color-mix(in srgb, var(--gmui-accent-primary) 12%, transparent);
+		}
+
+		.muted {
+			flex-shrink: 0;
+			color: var(--gmui-color-neutral-400);
+		}
+
+		li.active .name a {
+			color: inherit;
 		}
 	}
 </style>

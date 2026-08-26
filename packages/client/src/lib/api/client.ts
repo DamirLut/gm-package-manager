@@ -38,8 +38,14 @@ export async function searchPackages(fetch: Fetch, query: string): Promise<Packa
 	return response.json();
 }
 
-export async function getPackageReadme(fetch: Fetch, id: string): Promise<string> {
-	const response = await fetch(`/-/verdaccio/data/package/readme/${encodeURIComponent(id)}`);
+export async function getPackageReadme(
+	fetch: Fetch,
+	id: string,
+	version?: string
+): Promise<string> {
+	const response = await fetch(
+		`/-/verdaccio/data/package/readme/${encodeURIComponent(id)}${versionQuery(version)}`
+	);
 
 	if (!response.ok) {
 		throw new ApiError(
@@ -51,8 +57,14 @@ export async function getPackageReadme(fetch: Fetch, id: string): Promise<string
 	return response.text();
 }
 
-export async function getPackageSidebar(fetch: Fetch, id: string): Promise<PackageSidebar> {
-	const response = await fetch(`/-/verdaccio/data/sidebar/${encodeURIComponent(id)}`);
+export async function getPackageSidebar(
+	fetch: Fetch,
+	id: string,
+	version?: string
+): Promise<PackageSidebar> {
+	const response = await fetch(
+		`/-/verdaccio/data/sidebar/${encodeURIComponent(id)}${versionQuery(version)}`
+	);
 
 	if (!response.ok) {
 		throw new ApiError(
@@ -62,4 +74,11 @@ export async function getPackageSidebar(fetch: Fetch, id: string): Promise<Packa
 	}
 
 	return response.json();
+}
+
+// versionQuery mirrors the registry's ?v=<version> selector used by the
+// website endpoints (see router/web.go).
+function versionQuery(version?: string): string {
+	if (!version) return '';
+	return `?v=${encodeURIComponent(version)}`;
 }
