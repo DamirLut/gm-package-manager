@@ -9,7 +9,7 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: packages/server/go.mod
@@ -23,7 +23,7 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: build integration image
         working-directory: packages/server
         run: docker build -f integration/Dockerfile -t gmpm-integration .
