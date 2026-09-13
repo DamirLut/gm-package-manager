@@ -9,3 +9,8 @@ node_modules/
 /packages/server/storage/
 /packages/server/bin/
 
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
