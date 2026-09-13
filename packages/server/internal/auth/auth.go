@@ -79,6 +79,7 @@ func New(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 type IssuedToken struct {
 	Secret string
 	Prefix string
+	UserID int64
 }
 
 func (s *Service) Login(ctx context.Context, name, pass, ip string) (*IssuedToken, error) {
@@ -156,10 +157,15 @@ func (s *Service) Verify(ctx context.Context, token string) (*Principal, error) 
 
 	return &Principal{
 		Name:    row.Username,
+		UserID:  row.UserID,
 		Scopes:  ParseScopes(row.Scopes),
 		TokenID: row.ID,
 	}, nil
 }
+
+// AllowSignup reports whether unknown credentials may create an account;
+// the OAuth login flow shares the policy with npm logins.
+func (s *Service) AllowSignup() bool { return s.cfg.AllowSignup }
 
 func (s *Service) issueToken(ctx context.Context, userID int64, ip string) (*IssuedToken, error) {
 	secret, err := newTokenSecret()
@@ -176,7 +182,7 @@ func (s *Service) issueToken(ctx context.Context, userID int64, ip string) (*Iss
 	); err != nil {
 		return nil, err
 	}
-	return &IssuedToken{Secret: secret, Prefix: prefix}, nil
+	return &IssuedToken{Secret: secret, Prefix: prefix, UserID: userID}, nil
 }
 
 // gmpm_<hex(32B crypto/rand)> — alphabet [0-9a-f_] fits the gmpm charset

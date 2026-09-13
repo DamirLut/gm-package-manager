@@ -17,15 +17,17 @@ type userRow struct {
 
 func findUserByUsername(ctx context.Context, db *sql.DB, username string) (*userRow, error) {
 	var u userRow
+	var hash sql.NullString
 	err := db.QueryRowContext(ctx,
 		"SELECT id, username, password_hash, status FROM users WHERE username = ?", username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Status)
+	).Scan(&u.ID, &u.Username, &hash, &u.Status)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("auth: find user: %w", err)
 	}
+	u.PasswordHash = hash.String // empty for OAuth-only accounts: verify always fails
 	return &u, nil
 }
 

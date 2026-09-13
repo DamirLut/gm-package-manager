@@ -27,7 +27,7 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query goose_db_version: %v", err)
 	}
-	if want := int64(1); version != want {
+	if want := int64(2); version != want {
 		t.Errorf("max(version_id) = %d, want %d", version, want)
 	}
 }

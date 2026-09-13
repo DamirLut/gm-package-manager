@@ -17,6 +17,12 @@ const (
 	ActionPackagePublish      = "package.publish"
 	ActionPackageUnpublish    = "package.unpublish"
 	ActionPackageAccessDenied = "package.access.denied"
+
+	ActionOAuthLoginSuccess = "auth.oauth.login.success"
+	ActionOAuthLoginFailed  = "auth.oauth.login.failed"
+	ActionIdentityLinked    = "account.identity.linked"
+	ActionIdentityUnlinked  = "account.identity.unlinked"
+	ActionAccountDeleted    = "account.deleted"
 )
 
 // Event is one audit record. Only identifiers (username, token prefix) may

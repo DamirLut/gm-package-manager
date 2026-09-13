@@ -4,6 +4,7 @@ import "context"
 
 type Principal struct {
 	Name    string
+	UserID  int64
 	Scopes  []Scope
 	TokenID int64 // internal only: never exposed in API responses or logs
 }
