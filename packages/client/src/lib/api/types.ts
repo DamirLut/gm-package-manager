@@ -81,3 +81,31 @@ export type PackageSidebar = {
 	_id: string;
 	latest: PackageVersion;
 };
+
+export type LinkedIdentity = {
+	provider: string;
+	username: string;
+	email?: string;
+	avatar_url?: string;
+	created_at: string;
+};
+
+export type SessionProfile = {
+	username: string;
+	created_at: string;
+	avatar_url?: string;
+	identities: LinkedIdentity[];
+};
+
+export type Session = {
+	user: SessionProfile | null;
+};
+
+export type AccountEvent = {
+	type: string;
+	ip?: string;
+	user_agent?: string;
+	provider?: string;
+	detail?: string;
+	created_at: string;
+};
