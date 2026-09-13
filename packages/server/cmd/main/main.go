@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,10 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
 	"server/internal/database"
+	"server/internal/identity"
 	"server/internal/logger"
 	"server/internal/router"
 	"server/internal/storage"
@@ -25,6 +29,11 @@ const addr = ":8080"
 func main() {
 	log := logger.New(os.Stdout)
 	slog.SetDefault(log)
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Error("env file loading failed", "err", err)
+		os.Exit(1)
+	}
 
 	store, err := storage.FromEnv(log)
 	if err != nil {
@@ -45,6 +54,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	identitySvc, err := identity.FromEnv(db.DB, log)
+	if err != nil {
+		log.Error("identity initialization failed", "err", err)
+		os.Exit(1)
+	}
+
 	rules, err := access.FromEnv(log)
 	if err != nil {
 		log.Error("access config failed", "err", err)
@@ -58,7 +73,7 @@ func main() {
 	}
 	defer auditor.Close()
 
-	r := router.New(log, store, authSvc, auditor, rules)
+	r := router.New(log, store, authSvc, identitySvc, auditor, rules)
 
 	srv := &http.Server{
 		Addr:    addr,

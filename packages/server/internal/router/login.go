@@ -9,6 +9,7 @@ import (
 
 	"server/internal/audit"
 	"server/internal/auth"
+	"server/internal/identity"
 )
 
 const (
@@ -24,7 +25,7 @@ type loginResponse struct {
 
 // PUT /-/user/org.couchdb.user:<name> — npm adduser contract.
 // Password comes from Authorization: Basic (preferred) or the JSON body.
-func handleLogin(svc *auth.Service, auditor *audit.Logger) http.HandlerFunc {
+func handleLogin(svc *auth.Service, identities *identity.Service, auditor *audit.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store")
 
@@ -53,6 +54,7 @@ func handleLogin(svc *auth.Service, auditor *audit.Logger) http.HandlerFunc {
 			return
 		}
 
+		identities.RecordEvent(r.Context(), tok.UserID, identity.EventLogin, ip, ua, "password", "")
 		auditor.Record(audit.Event{
 			Action:      audit.ActionLoginSuccess,
 			Actor:       name,

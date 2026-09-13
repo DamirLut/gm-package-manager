@@ -9,12 +9,13 @@ import (
 	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
+	"server/internal/identity"
 	"server/internal/storage"
 )
 
 // DELETE /<pkg>/-rev/:rev — npm unpublish: :rev must match the packument's
 // _rev, a stale one is a 409; shares the publish right.
-func handleUnpublish(store storage.Storage, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
+func handleUnpublish(store storage.Storage, identities *identity.Service, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name, rest := splitPkg(r.URL.Path)
 		if name == "" || !strings.HasPrefix(rest, "-rev/") {
@@ -65,6 +66,8 @@ func handleUnpublish(store storage.Storage, auditor *audit.Logger, rules []acces
 			return
 		}
 
+		identities.RecordEvent(r.Context(), p.UserID, identity.EventPackageUnpublish,
+			clientIP(r), r.UserAgent(), "", name)
 		auditor.Record(audit.Event{
 			Action:  audit.ActionPackageUnpublish,
 			Actor:   p.Name,

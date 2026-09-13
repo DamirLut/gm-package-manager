@@ -11,10 +11,11 @@ import (
 	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
+	"server/internal/identity"
 	"server/internal/storage"
 )
 
-func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service, auditor *audit.Logger, rules []access.Rule) *chi.Mux {
+func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service, identities *identity.Service, auditor *audit.Logger, rules []access.Rule) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
@@ -27,7 +28,7 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	r.Post("/-/npm/v1/security/advisories/bulk", handleAudit)
 
 	// npm adduser bootstrap (Basic or JSON body, see login.go)
-	r.Put("/-/user/*", handleLogin(authenticator, auditor))
+	r.Put("/-/user/*", handleLogin(authenticator, identities, auditor))
 
 	// IDE package list (see packages.go)
 	r.Get("/-/verdaccio/data/packages", handlePackages(store, logger))
@@ -40,15 +41,29 @@ func New(logger *slog.Logger, store storage.Storage, authenticator *auth.Service
 	r.Get("/-/verdaccio/data/sidebar/*", handleSidebar(store))
 	r.Get("/-/verdaccio/data/package/readme/*", handleReadme(store))
 
+	// website auth & profile (see webauth.go, account.go); the session
+	// middleware stays inside the group so npm traffic never pays for it
+	r.Group(func(web chi.Router) {
+		web.Use(sessionAuth(identities))
+		web.Get("/-/auth/session", handleWebSession(identities))
+		web.Get("/-/auth/{provider}/start", handleOAuthStart(identities))
+		web.Get("/-/auth/{provider}/callback", handleOAuthCallback(identities, authenticator, auditor))
+		web.Post("/-/auth/logout", handleLogout(identities))
+		web.Get("/-/account/logins", handleAccountLogins(identities))
+		web.Get("/-/account/activity", handleAccountActivity(identities))
+		web.Delete("/-/account/identities/{provider}", handleIdentityUnlink(identities, auditor))
+		web.Delete("/-/account", handleAccountDelete(identities, auditor))
+	})
+
 	// npm publish (see publish.go)
-	r.Put("/*", handlePublish(store, auditor, rules))
+	r.Put("/*", handlePublish(store, identities, auditor, rules))
 
 	// scoped names contain a slash and arrive in different encodings,
 	// so the package path is parsed manually (see pkg.go)
 	r.Get("/*", handlePkg(store, auditor, rules))
 
 	// npm unpublish (see unpublish.go)
-	r.Delete("/*", handleUnpublish(store, auditor, rules))
+	r.Delete("/*", handleUnpublish(store, identities, auditor, rules))
 
 	return r
 }

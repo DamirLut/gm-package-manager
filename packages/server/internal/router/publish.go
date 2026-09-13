@@ -22,6 +22,7 @@ import (
 	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
+	"server/internal/identity"
 	"server/internal/storage"
 )
 
@@ -54,7 +55,7 @@ type publishResponse struct {
 }
 
 // PUT /<pkg> — npm publish contract: statuses are protocol, messages are not.
-func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
+func handlePublish(store storage.Storage, identities *identity.Service, auditor *audit.Logger, rules []access.Rule) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name, rest := splitPkg(r.URL.Path)
 		if name == "" || rest != "" {
@@ -218,6 +219,8 @@ func handlePublish(store storage.Storage, auditor *audit.Logger, rules []access.
 			return
 		}
 
+		identities.RecordEvent(r.Context(), p.UserID, identity.EventPackagePublish,
+			clientIP(r), r.UserAgent(), "", name+"@"+version)
 		auditor.Record(audit.Event{
 			Action:  audit.ActionPackagePublish,
 			Actor:   p.Name,
@@ -324,15 +327,21 @@ func avatarURL(username string) string {
 	return "https://blobatar.dev/avatar/" + url.PathEscape(username) + "?gen=2"
 }
 
+// requestScheme mirrors how the client reaches this server (reverse proxy
+// included); tarball URLs and OAuth callbacks must match it.
+func requestScheme(r *http.Request) string {
+	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		return proto
+	}
+	if r.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
 // stored URLs must match how clients reach this server (reverse proxy included).
 func tarballURL(r *http.Request, name, filename string) string {
-	scheme := "http"
-	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-		scheme = proto
-	} else if r.TLS != nil {
-		scheme = "https"
-	}
-	return scheme + "://" + r.Host + "/" + name + "/-/" + filename
+	return requestScheme(r) + "://" + r.Host + "/" + name + "/-/" + filename
 }
 
 // nextRev produces the CouchDB-style revision "N-<hash>" npm unpublish

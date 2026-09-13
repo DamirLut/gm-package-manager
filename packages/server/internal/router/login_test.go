@@ -11,6 +11,7 @@ import (
 
 	"server/internal/access"
 	"server/internal/auth"
+	"server/internal/identity"
 )
 
 const loginPath = "/-/user/org.couchdb.user:alice"
@@ -150,12 +151,12 @@ func TestLoginWrongPassword(t *testing.T) {
 }
 
 func TestLoginUnknownUserSignupDisabled(t *testing.T) {
-	ts := newTestServerWithAuth(t, auth.Config{
+	ts := newTestServerFull(t, auth.Config{
 		AllowSignup: false,
 		TokenTTL:    time.Hour,
 		DelayBase:   time.Nanosecond,
 		DelayCap:    time.Microsecond,
-	}, access.Default())
+	}, access.Default(), identity.Config{GitHub: nil})
 
 	req := httptest.NewRequest(http.MethodPut, loginPath, nil)
 	req.SetBasicAuth("stranger", "pw")
