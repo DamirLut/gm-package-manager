@@ -1,4 +1,10 @@
+<p align="center">
+  <img src=".github/assets/gmpm.png" alt="gmpm logo" width="200" />
+</p>
+
 # GameMaker Package Manager
+![Tests](https://github.com/damirlut/gm-package-manager/actions/workflows/ci.yml/badge.svg)
+![GitHub Tag](https://img.shields.io/github/v/tag/damirlut/gm-package-manager)
 
 A self-hosted package registry for [GameMaker](https://gamemaker.io) assets and plugins. It speaks the standard npm protocol, so it works with the regular `npm` CLI — no special client required.
 
@@ -44,6 +50,16 @@ npm publish
 | `STORAGE_BACKEND` | `local` | Storage backend (`s3` not implemented yet) |
 | `STORAGE_PATH` | `./storage` | Directory for tarballs and the audit log |
 | `DISABLE_SIGNUP` | `false` | When `true`, only existing users can log in |
+| `GITHUB_CLIENT_ID` | *(unset)* | GitHub OAuth app client id; enables the "Sign in with GitHub" button on the website |
+| `GITHUB_CLIENT_SECRET` | *(unset)* | GitHub OAuth app client secret |
+
+### GitHub sign-in setup
+
+1. Create an OAuth App at <https://github.com/settings/developers> with the callback URL `https://<your-host>/-/auth/github/callback`.
+2. Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (see `docker-compose.yaml`).
+3. First GitHub login creates a profile (unless `DISABLE_SIGNUP=true`); more provider accounts can be linked later from the `/account` page, which also shows login history, recent activity, and account deletion.
+
+Website sessions live in the browser as a `gmpm_session` cookie and are independent from npm CLI tokens.
 
 ## Development
 
