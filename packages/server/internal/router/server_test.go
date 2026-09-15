@@ -12,6 +12,7 @@ import (
 	"server/internal/access"
 	"server/internal/audit"
 	"server/internal/auth"
+	"server/internal/blob"
 	"server/internal/database"
 	"server/internal/identity"
 	"server/internal/storage"
@@ -71,7 +72,7 @@ func newTestServerFull(t *testing.T, cfg auth.Config, rules []access.Rule, idCfg
 	}
 	t.Cleanup(func() { auditor.Close() })
 
-	store := storage.NewLocal(filepath.Join(dir, "packages"))
+	store := storage.New(blob.NewLocal(filepath.Join(dir, "packages")))
 
 	return &testServer{
 		handler:   New(log, store, svc, idSvc, auditor, rules),

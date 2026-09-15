@@ -5,17 +5,23 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"server/internal/blob"
 )
 
+func newTestStore(t *testing.T) *Store {
+	t.Helper()
+	return New(blob.NewLocal(t.TempDir()))
+}
+
 func TestManifestRoundtrip(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 	ctx := context.Background()
 
 	want := []byte(`{"name":"@scope/foo","versions":{}}`)
@@ -54,7 +60,7 @@ func TestManifestRoundtrip(t *testing.T) {
 }
 
 func TestGetManifestNotExist(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 
 	if _, err := s.GetManifest(context.Background(), "missing"); !errors.Is(err, ErrNotExist) {
 		t.Fatalf("err = %v, want ErrNotExist", err)
@@ -65,7 +71,7 @@ func TestGetManifestNotExist(t *testing.T) {
 }
 
 func TestTarballRoundtrip(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 	ctx := context.Background()
 
 	content := "fake tarball bytes"
@@ -96,7 +102,7 @@ func TestTarballRoundtrip(t *testing.T) {
 }
 
 func TestGetTarballNotExist(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 	ctx := context.Background()
 
 	if _, _, err := s.GetTarball(ctx, "pkg", "p-1.0.0.tgz"); !errors.Is(err, ErrNotExist) {
@@ -108,7 +114,7 @@ func TestGetTarballNotExist(t *testing.T) {
 }
 
 func TestInvalidInputRejected(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -127,6 +133,10 @@ func TestInvalidInputRejected(t *testing.T) {
 		}},
 		{"put tarball empty name", func() error {
 			_, err := s.PutTarball(ctx, "pkg", "", strings.NewReader("x"))
+			return err
+		}},
+		{"put tarball manifest name", func() error {
+			_, err := s.PutTarball(ctx, "pkg", "package.json", strings.NewReader("x"))
 			return err
 		}},
 		{"get manifest traversal", func() error {
@@ -149,26 +159,20 @@ func TestInvalidInputRejected(t *testing.T) {
 }
 
 func TestListPackages(t *testing.T) {
-	root := t.TempDir()
-	s := NewLocal(root)
+	s := newTestStore(t)
+	ctx := context.Background()
 
-	seed := map[string]string{
-		"@scope/foo/package.json":  `{}`,
-		"bar/package.json":         `{}`,
-		"bar/bar-1.0.0.tgz":        "tarball",
-		"@scope/foo/foo-1.0.0.tgz": "tarball",
+	if err := s.PutManifest(ctx, "@scope/foo", []byte(`{}`)); err != nil {
+		t.Fatal(err)
 	}
-	for path, data := range seed {
-		full := filepath.Join(root, filepath.FromSlash(path))
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(full, []byte(data), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.PutManifest(ctx, "bar", []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PutTarball(ctx, "bar", "bar-1.0.0.tgz", strings.NewReader("t")); err != nil {
+		t.Fatal(err)
 	}
 
-	got, err := s.ListPackages(context.Background())
+	got, err := s.ListPackages(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -180,12 +184,12 @@ func TestListPackages(t *testing.T) {
 	}
 }
 
-func TestListPackagesMissingRoot(t *testing.T) {
-	s := NewLocal(filepath.Join(t.TempDir(), "absent"))
+func TestListPackagesEmpty(t *testing.T) {
+	s := newTestStore(t)
 
 	got, err := s.ListPackages(context.Background())
 	if err != nil {
-		t.Fatalf("list on missing root: %v", err)
+		t.Fatalf("list on empty store: %v", err)
 	}
 	if len(got) != 0 {
 		t.Fatalf("got %v, want empty", got)
@@ -193,7 +197,7 @@ func TestListPackagesMissingRoot(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 
 	unlockA := s.Lock("a")
 	unlockB := s.Lock("b")
@@ -223,53 +227,8 @@ func TestLock(t *testing.T) {
 	}
 }
 
-func TestFromEnv(t *testing.T) {
-	tests := []struct {
-		name        string
-		backend     string
-		path        string
-		wantErr     bool
-		errContains string
-		checkRoot   bool
-		wantRoot    string
-	}{
-		{name: "default local", backend: "", checkRoot: true, wantRoot: "./storage"},
-		{name: "explicit local", backend: "local", path: "/tmp/store", checkRoot: true, wantRoot: "/tmp/store"},
-		{name: "s3 not implemented", backend: "s3", wantErr: true, errContains: "not implemented"},
-		{name: "unknown backend", backend: "gcs", wantErr: true, errContains: "unknown backend"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("STORAGE_BACKEND", tt.backend)
-			t.Setenv("STORAGE_PATH", tt.path)
-
-			st, err := FromEnv(slog.New(slog.NewTextHandler(io.Discard, nil)))
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("FromEnv() = %v, want error", st)
-				}
-				if !strings.Contains(err.Error(), tt.errContains) {
-					t.Fatalf("err = %v, want contains %q", err, tt.errContains)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("FromEnv(): %v", err)
-			}
-			l, ok := st.(*Local)
-			if !ok {
-				t.Fatalf("FromEnv() returned %T, want *Local", st)
-			}
-			if tt.checkRoot && l.root != tt.wantRoot {
-				t.Fatalf("root = %q, want %q", l.root, tt.wantRoot)
-			}
-		})
-	}
-}
-
 func TestDeletePackage(t *testing.T) {
-	s := NewLocal(t.TempDir())
+	s := newTestStore(t)
 	ctx := context.Background()
 
 	if _, err := s.PutTarball(ctx, "@acme/lib", "lib-1.0.0.tgz", strings.NewReader("tar")); err != nil {
@@ -298,5 +257,34 @@ func TestDeletePackage(t *testing.T) {
 	}
 	if !slices.Equal(pkgs, []string{"@acme/other"}) {
 		t.Errorf("packages = %v, want [@acme/other]", pkgs)
+	}
+
+	// deleting an unknown package is a no-op
+	if err := s.DeletePackage(ctx, "@acme/lib"); err != nil {
+		t.Errorf("repeat delete: %v", err)
+	}
+}
+
+// TestKeysMirrorDiskLayout pins the object layout to the one the local
+// driver used before the blob refactor, so existing data stays readable.
+func TestKeysMirrorDiskLayout(t *testing.T) {
+	root := t.TempDir()
+	s := New(blob.NewLocal(root))
+	ctx := context.Background()
+
+	if err := s.PutManifest(ctx, "@scope/foo", []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PutTarball(ctx, "@scope/foo", "foo-1.0.0.tgz", strings.NewReader("t")); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{
+		"@scope/foo/package.json",
+		"@scope/foo/foo-1.0.0.tgz",
+	} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(path))); err != nil {
+			t.Errorf("expected file at %s: %v", path, err)
+		}
 	}
 }

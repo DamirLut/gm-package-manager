@@ -2,7 +2,7 @@
 # and lands on install; custom tags must not move "latest".
 suite "update: new version"
 
-sed -i 's/"version": "0.1.0"/"version": "0.2.0"/' "$WORK/minimal/package.json"
+sed -i "" 's/"version": "0.1.0"/"version": "0.2.0"/' "$WORK/minimal/package.json"
 printf 'payload 0.2.0\n' >"$WORK/minimal/data.txt"
 if out=$(npm_as "$WORK/alice.npmrc" publish "$WORK/minimal" 2>&1); then
 	ok "npm publish @it/minimal@0.2.0"
@@ -36,7 +36,7 @@ eq "installed content updated" \
 
 suite "update: custom dist-tag"
 
-sed -i 's/"version": "0.2.0"/"version": "0.3.0"/' "$WORK/minimal/package.json"
+sed -i "" 's/"version": "0.2.0"/"version": "0.3.0"/' "$WORK/minimal/package.json"
 if out=$(npm_as "$WORK/alice.npmrc" publish --tag next "$WORK/minimal" 2>&1); then
 	ok "npm publish --tag next"
 else

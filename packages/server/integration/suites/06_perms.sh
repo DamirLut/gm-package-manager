@@ -21,7 +21,7 @@ fi
 
 # bob's version differs from the published one, so only the access rule
 # can deny him — no client-side or 409 ambiguity.
-sed -i 's/"version": "1.0.0"/"version": "2.0.0"/' "$WORK/secret/package.json"
+sed -i "" 's/"version": "1.0.0"/"version": "2.0.0"/' "$WORK/secret/package.json"
 if out=$(npm_as "$WORK/bob.npmrc" publish "$WORK/secret" 2>&1); then
 	fail "bob denied on @private/**"
 else
@@ -43,7 +43,7 @@ if out=$(npm_as "$WORK/bob.npmrc" publish "$WORK/restricted" 2>&1); then
 else
 	contains "bob denied on @restricted/** (E403)" "$out" "E403"
 fi
-sed -i 's/"version": "1.0.0"/"version": "1.0.1"/' "$WORK/restricted/package.json"
+sed -i "" 's/"version": "1.0.0"/"version": "1.0.1"/' "$WORK/restricted/package.json"
 if out=$(npm_as "$WORK/alice.npmrc" publish "$WORK/restricted" 2>&1); then
 	ok "alice allowed on @restricted/**"
 else

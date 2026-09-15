@@ -14,7 +14,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/main
 
 FROM node:26-alpine
-RUN apk add --no-cache bash curl jq
+RUN apk add --no-cache bash curl jq sqlite unzip openssl
 
 COPY --from=build /out/server /usr/local/bin/server
 COPY integration/ /opt/integration

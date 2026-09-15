@@ -16,7 +16,8 @@ A self-hosted package registry for [GameMaker](https://gamemaker.io) assets and 
 - **Authentication** — token-based auth via `npm adduser`; first login auto-creates an account (can be disabled)
 - **Access control** — per-package read/publish rules with glob patterns (`$all`, `$anonymous`, `$authenticated`, or specific users)
 - **Audit log** — every publish/unpublish/login is recorded to a JSONL audit trail
-- **Simple storage** — metadata in SQLite, tarballs on the local filesystem (S3 backend planned)
+- **Storage** — one blob layer behind packages and backups: local directory or any S3-compatible bucket (AWS S3, MinIO, Cloudflare R2)
+- **Scheduled backups** — zip archives of the database and packages stored in the same storage backend, created on a cron schedule with automatic pruning
 
 ## Quick start
 
@@ -47,11 +48,27 @@ npm publish
 | --- | --- | --- |
 | `DATABASE_PATH` | `./storage/metadata.db` | SQLite database location |
 | `DATABASE_AUTO_MIGRATE` | `true` | Run schema migrations on startup |
-| `STORAGE_BACKEND` | `local` | Storage backend (`s3` not implemented yet) |
-| `STORAGE_PATH` | `./storage` | Directory for tarballs and the audit log |
+| `STORAGE_BACKEND` | `local` | Blob storage backend: `local` or `s3` |
+| `STORAGE_PATH` | `./storage` | Local data directory (audit log, temp files; package files when the backend is `local`) |
+| `S3_ENDPOINT` | *(unset)* | S3 endpoint host (`s3.amazonaws.com`, `minio:9000`, …); required with `STORAGE_BACKEND=s3` |
+| `S3_BUCKET` | *(unset)* | S3 bucket name |
+| `S3_REGION` | `us-east-1` | S3 region |
+| `S3_ACCESS_KEY` | *(unset)* | S3 access key |
+| `S3_SECRET_KEY` | *(unset)* | S3 secret key |
+| `S3_SECURE` | `true` | Use HTTPS for the S3 endpoint |
+| `S3_PATH_STYLE` | `false` | Path-style addressing (`https://endpoint/bucket/key`); required by MinIO, R2, B2 |
 | `DISABLE_SIGNUP` | `false` | When `true`, only existing users can log in |
 | `GITHUB_CLIENT_ID` | *(unset)* | GitHub OAuth app client id; enables the "Sign in with GitHub" button on the website |
 | `GITHUB_CLIENT_SECRET` | *(unset)* | GitHub OAuth app client secret |
+| `BACKUP_CRON` | *(unset)* | Cron schedule (5 fields) for automatic backups, e.g. `0 3 * * *` |
+| `BACKUP_KEEP` | *(unset)* | How many recent `auto-*` backups to keep (only applies to scheduled backups) |
+| `SERVER_ADDR` | `:8080` | Listen address of the server |
+
+The server verifies the S3 credentials and bucket on startup and refuses to start on failure. With `STORAGE_BACKEND=s3`, package files and backups live in the bucket while the SQLite database and audit log stay on the local volume.
+
+### Backups
+
+With `BACKUP_CRON` set, the server creates a backup on that schedule: a zip archive with a consistent SQLite snapshot (`VACUUM INTO`), the audit log and — when the backend is `local` — the whole package storage. With `s3` storage the archive holds only the database, since package files are already remote. Archives are stored as `backups/<timestamp>.zip` in the same storage backend (`<STORAGE_PATH>/backups/` locally, or the bucket); `BACKUP_KEEP` prunes the oldest `auto-*` archives, manual copies taken from the backend are never touched.
 
 ### GitHub sign-in setup
 
